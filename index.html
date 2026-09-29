@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MediQR — Emergency Medical ID</title>
+<style>
+  :root { --red:#D32F2F; --red-dark:#B71C1C; --ink:#1C1B1F; --muted:#5A5A5F; --surface:#F3F4F6; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#fff; color:var(--ink); line-height:1.5; }
+  .wrap { max-width:640px; margin:0 auto; padding:48px 20px; text-align:center; }
+  .logo { width:72px; height:72px; border-radius:18px; background:var(--red); display:inline-flex; align-items:center; justify-content:center; }
+  .logo svg { width:44px; height:44px; }
+  h1 { font-size:32px; margin-top:18px; color:var(--red); }
+  .sub { color:var(--muted); margin-top:6px; }
+  .card { background:var(--surface); border-radius:16px; padding:22px; margin-top:28px; text-align:left; }
+  .card p { color:var(--muted); }
+  .card p + p { margin-top:10px; }
+  footer { margin-top:34px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>
+    </div>
+    <h1>MediQR</h1>
+    <p class="sub">Emergency Medical ID</p>
+    <div class="card">
+      <p>This address hosts <strong>MediQR public medical cards</strong>. Each card lives at
+      <code>/card/&lt;card-id&gt;</code> and is opened automatically when someone scans a MediQR QR code
+      with the MediQR app installed.</p>
+      <p>If you followed a QR link and see this page, the card id may be incomplete — ask the card
+      owner to re-share their QR code.</p>
+    </div>
+    <footer>Built with MediQR · card data is shared voluntarily and limited to emergency fields.</footer>
+  </div>
+</body>
+</html>

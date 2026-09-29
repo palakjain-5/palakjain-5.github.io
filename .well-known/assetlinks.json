@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.mediqr",
+      "sha256_cert_fingerprints": [
+        "EB:58:36:C3:1F:89:55:9C:ED:84:86:D4:95:D5:DF:89:16:BE:18:E8:E0:F1:6F:63:0B:8B:37:98:F2:92:C9:2E"
+      ]
+    }
+  }
+]

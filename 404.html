@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Emergency Medical Card — MediQR</title>
+<style>
+  :root { --red:#D32F2F; --red-dark:#B71C1C; --red-light:#FFF1F0; --ink:#1C1B1F;
+          --muted:#5A5A5F; --surface:#F3F4F6; --line:#E5E7EB; --green:#2E7D32; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+         background:#fff; color:var(--ink); line-height:1.55; -webkit-text-size-adjust:100%; }
+  .top { background:var(--red); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:10px; }
+  .top .mark { width:30px; height:30px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; flex:none; }
+  .top .mark svg { width:18px; height:18px; fill:var(--red); }
+  .top b { font-size:17px; letter-spacing:.3px; }
+  .top span { font-size:11px; opacity:.9; display:block; font-weight:400; }
+  main { max-width:640px; margin:0 auto; padding:22px 16px 40px; }
+  .banner { background:var(--red-light); border:1px solid #FFCDD2; color:var(--red-dark);
+            border-radius:12px; padding:10px 14px; font-size:13px; font-weight:600;
+            display:flex; gap:8px; align-items:center; margin-bottom:18px; }
+  .name { font-size:26px; font-weight:800; word-break:break-word; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip { background:var(--red); color:#fff; border-radius:999px; padding:5px 14px; font-size:14px; font-weight:700; }
+  .chip.alt { background:var(--surface); color:var(--ink); font-weight:600; }
+  .section { background:var(--surface); border-radius:14px; padding:16px 18px; margin-top:14px; }
+  .section h3 { font-size:12px; letter-spacing:.8px; text-transform:uppercase; color:var(--red-dark); margin-bottom:6px; }
+  .section p { white-space:pre-wrap; word-break:break-word; }
+  .contact { background:var(--surface); border-radius:14px; padding:14px 16px; margin-top:10px;
+             display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .contact .who { min-width:0; }
+  .contact .who b { display:block; font-size:15px; }
+  .contact .who small { color:var(--muted); }
+  .call { flex:none; background:var(--red); color:#fff; text-decoration:none; font-weight:700;
+          border-radius:10px; padding:10px 18px; font-size:15px; }
+  .call:active { background:var(--red-dark); }
+  .center { text-align:center; padding:70px 20px; color:var(--muted); }
+  .center h2 { color:var(--ink); margin-bottom:8px; font-size:22px; }
+  .center a { color:var(--red); font-weight:600; }
+  .spinner { width:34px; height:34px; border:4px solid #FFCDD2; border-top-color:var(--red);
+             border-radius:50%; margin:0 auto 16px; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  footer { max-width:640px; margin:0 auto; padding:0 16px 30px; color:var(--muted); font-size:12px; text-align:center; }
+  .app-link { display:inline-block; margin-top:10px; color:var(--red); font-weight:600; text-decoration:none; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg></div>
+    <div><b>MediQR</b><span>EMERGENCY MEDICAL CARD</span></div>
+  </header>
+  <main id="app">
+    <div class="center"><div class="spinner"></div>Loading medical card…</div>
+  </main>
+  <footer id="foot" hidden>
+    Data shared voluntarily by the card owner · whitelisted emergency fields only.
+    <br><a class="app-link" id="openApp" href="#" hidden>Open in the MediQR app →</a>
+  </footer>
+  <script>
+  (function () {
+    "use strict";
+    // Injected at publish time from the same secrets.properties the Android
+    // build uses. These are the PUBLISHABLE Supabase values: the anon key is
+    // designed to be public and can only call the whitelisted RPC (RLS).
+    var SUPABASE_URL = "https://aummztwihmzfvgawbfxn.supabase.co";
+    var ANON_KEY = "sb_publishable_TkbOAUaRApKtcbOwg9x1jQ_EVfSMJ-5";
+
+    var UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    var app = document.getElementById("app");
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function present(v) { return v !== null && v !== undefined && String(v).trim() !== ""; }
+
+    function notFound(msg) {
+      app.innerHTML =
+        '<div class="center"><h2>' + esc(msg) + "</h2>" +
+        "<p>This QR code does not point to an active medical card.</p>" +
+        '<p style="margin-top:12px"><a href="/">← MediQR home</a></p></div>';
+      document.getElementById("foot").hidden = false;
+    }
+
+    function section(title, text) {
+      if (!present(text)) return "";
+      return '<section class="section"><h3>' + esc(title) + "</h3><p>" + esc(text) + "</p></section>";
+    }
+
+    function render(d) {
+      var html = "";
+      if (present(d.full_name)) html += '<div class="name">' + esc(d.full_name) + "</div>";
+      var chips = "";
+      if (present(d.blood_group)) chips += '<span class="chip">' + esc(d.blood_group) + "</span>";
+      html += '<div class="chips">' + (chips || "") + "</div>";
+      html += section("Allergies", d.allergies);
+      html += section("Medical conditions", d.medical_conditions);
+      html += section("Medications", d.medications);
+      html += section("Additional information", d.additional_info);
+
+      var contacts = Array.isArray(d.emergency_contacts) ? d.emergency_contacts : [];
+      var any = chips || present(d.allergies) || present(d.medical_conditions) ||
+                present(d.medications) || present(d.additional_info) || contacts.length;
+      if (!any) { notFound("This card has no medical information yet"); return; }
+
+      if (contacts.length) {
+        html += '<section class="section" style="padding-bottom:8px"><h3>Emergency contacts</h3></section>';
+        contacts.forEach(function (c) {
+          if (!c) return;
+          var name = present(c.contact_name) ? c.contact_name : "Emergency contact";
+          var phone = present(c.phone_number) ? c.phone_number : null;
+          var role = present(c.position) ? "Contact " + c.position : "";
+          html += '<div class="contact"><div class="who"><b>' + esc(name) + "</b>" +
+            (phone ? "<small>" + esc(phone) + "</small>" : "") +
+            (role && phone ? "" : "") + "</div>" +
+            (phone ? '<a class="call" href="tel:' + esc(String(phone).replace(/\s+/g, "")) + '">Call</a>' : "") +
+            "</div>";
+        });
+      }
+      app.innerHTML = '<div class="banner">⚠ Emergency information — provided by the card owner</div>' + html;
+      document.getElementById("foot").hidden = false;
+
+      // Subtle "open in app" shortcut for Android visitors with MediQR installed.
+      var m = location.pathname.match(/\/card\/([0-9a-fA-F-]{36})/);
+      if (m && /Android/i.test(navigator.userAgent)) {
+        var a = document.getElementById("openApp");
+        a.href = "intent://card/" + m[1] +
+          "#Intent;scheme=https;package=com.example.mediqr;S.browser_fallback_url=" +
+          encodeURIComponent(location.href) + ";end";
+        a.hidden = false;
+      }
+    }
+
+    var id = (location.pathname.match(/\/card\/([0-9a-fA-F-]{36})/) || [])[1];
+    if (!id || !UUID_RE.test(id)) { notFound("Invalid card link"); return; }
+
+    fetch(SUPABASE_URL + "/rest/v1/rpc/get_public_card", {
+      method: "POST",
+      headers: {
+        "apikey": ANON_KEY,
+        "Authorization": "Bearer " + ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ p_card_id: id })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (d) {
+      if (d === null) notFound("Card not found");
+      else render(d);
+    }).catch(function () {
+      notFound("Could not load the card");
+    });
+  })();
+  </script>
+</body>
+</html>
